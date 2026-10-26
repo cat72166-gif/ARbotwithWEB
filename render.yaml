@@ -3,7 +3,7 @@ services:
     name: arbet-live-score-alert
     runtime: node
     plan: 1c-2g
-    buildCommand: npm install && npx playwright install chromium
+    buildCommand: npm install && node ./node_modules/playwright/cli.js install chromium
     startCommand: npm start
     healthCheckPath: /
     envVars:
