@@ -16,7 +16,7 @@ const threshold = Number(process.env.YES_RATE_THRESHOLD || 40);
 const intervalMs = Math.max(15, Number(process.env.CHECK_INTERVAL_SECONDS || 45)) * 1000;
 const once = process.argv.includes('--once');
 const defaultWindowsEdge = 'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe';
-const dashboardPort = Number(process.env.DASHBOARD_PORT || 3000);
+const dashboardPort = Number(process.env.PORT || process.env.DASHBOARD_PORT || 3000);
 const dashboardPath = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'index.html');
 const targetMarket = 'To score (incl. overtime)';
 const targetMarkets = [targetMarket];
@@ -144,8 +144,8 @@ function startDashboardServer() {
       response.end(`Dashboard error: ${error instanceof Error ? error.message : String(error)}`);
     }
   });
-  server.listen(dashboardPort, '127.0.0.1', () => {
-    console.log(`[${new Date().toISOString()}] Dashboard available at http://127.0.0.1:${dashboardPort}`);
+  server.listen(dashboardPort, '0.0.0.0', () => {
+    console.log(`[${new Date().toISOString()}] Dashboard listening on 0.0.0.0:${dashboardPort}`);
   });
   return server;
 }
@@ -1106,15 +1106,26 @@ async function check(page) {
 }
 
 async function main() {
-  // Use the locally installed Edge on Windows so this works without Playwright
-  // having to download its own browser. ARBET_BROWSER_PATH can override this.
-  const executablePath = process.env.ARBET_BROWSER_PATH || (process.platform === 'win32' ? defaultWindowsEdge : undefined);
+  // On Windows, use the installed Edge by default. On Linux/Render, explicitly
+  // use Playwright's installed full Chromium channel rather than the separate
+  // headless-shell executable. ARBET_BROWSER_PATH can override the executable.
   const dashboardServer = startDashboardServer();
-  const browser = await chromium.launch({
+  const launchOptions = {
     headless: process.env.HEADLESS !== 'false',
-    executablePath,
-    args: ['--disable-notifications'],
-  });
+    args: [
+      '--disable-notifications',
+      '--no-sandbox',
+      '--disable-dev-shm-usage',
+    ],
+  };
+  if (process.env.ARBET_BROWSER_PATH) {
+    launchOptions.executablePath = process.env.ARBET_BROWSER_PATH;
+  } else if (process.platform === 'win32') {
+    launchOptions.executablePath = defaultWindowsEdge;
+  } else {
+    launchOptions.channel = 'chromium';
+  }
+  const browser = await chromium.launch(launchOptions);
   const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
   // Dismiss ordinary JavaScript dialogs as soon as they are raised, including
   // dialogs that appear while the page is still loading.

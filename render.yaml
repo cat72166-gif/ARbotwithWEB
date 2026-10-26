@@ -1,0 +1,27 @@
+services:
+  - type: web
+    name: arbet-live-score-alert
+    runtime: node
+    plan: 1c-2g
+    buildCommand: npm install && npx playwright install chromium
+    startCommand: npm start
+    healthCheckPath: /
+    envVars:
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: TELEGRAM_CHAT_ID
+        sync: false
+      - key: YES_RATE_THRESHOLD
+        value: "39"
+      - key: CHECK_INTERVAL_SECONDS
+        value: "45"
+      - key: ARBET_URL
+        value: https://inr.arbet.club/live/soccer
+      - key: HEADLESS
+        value: "true"
+      - key: DRY_RUN
+        value: "false"
+      - key: TRANSFERMARKT_BOT_TOKEN
+        sync: false
+      - key: TRANSFERMARKT_CHAT_ID
+        sync: false
